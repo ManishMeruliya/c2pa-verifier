@@ -1,0 +1,33 @@
+# Node
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+backend/.env
+frontend/.env
+
+# Build outputs
+frontend/dist/
+backend/uploads/
+
+# Binary tools
+c2patool
+c2patool.exe
+backend/c2patool
+backend/c2patool.exe
+
+# Editor
+.vscode/
+.idea/
+*.swp
