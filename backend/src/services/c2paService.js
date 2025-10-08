@@ -2,6 +2,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
+import { ensureC2PAToolAvailable } from "../utils/c2paInstaller.js";
 
 const execAsync = promisify(exec);
 
@@ -35,8 +36,16 @@ export const extractC2PAData = async (filePath) => {
     console.log("📷 Reading file with c2patool:", filePath);
     
     const absPath = path.resolve(filePath);
-    const c2patoolPath = getC2PAToolPath();
-    
+    let c2patoolPath = getC2PAToolPath();
+
+    // Verify tool is runnable; if not, attempt auto-install
+    try {
+      await execAsync(`"${c2patoolPath}" --version`);
+    } catch (probeError) {
+      console.warn("⚠️ c2patool not runnable, attempting auto-install:", probeError?.message);
+      c2patoolPath = await ensureC2PAToolAvailable();
+    }
+
     const command = `"${c2patoolPath}" "${absPath}"`;
     console.log("🔍 Running command:", command);
     
@@ -92,6 +101,25 @@ export const extractC2PAData = async (filePath) => {
       };
     }
     
+    // If it's a GLIBC or not found error, try one-time install and retry
+    if (error.message.includes("GLIBC") || error.message.includes("not found") || error.message.includes("ENOENT")) {
+      try {
+        const installedPath = await ensureC2PAToolAvailable();
+        const retryCmd = `"${installedPath}" "${path.resolve(filePath)}"`;
+        const { stdout } = await execAsync(retryCmd);
+        const json = JSON.parse(stdout);
+        return {
+          json: {
+            ...json,
+            hasC2PAData: true
+          },
+          outputPath: null
+        };
+      } catch (retryErr) {
+        console.error("Auto-install retry failed:", retryErr.message);
+      }
+    }
+
     throw new Error(`Failed to extract C2PA metadata: ${error.message}`);
   }
 };
